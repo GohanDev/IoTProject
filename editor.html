@@ -2,7 +2,7 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Gestor de UIDs Proibidos</title>
+  <title>Gestor de Cães Proibidos</title>
   <style>
     body {
       font-family: sans-serif;
@@ -13,9 +13,9 @@
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    textarea, input, button {
+    input, button {
       width: 100%;
-      margin: 10px 0;
+      margin: 5px 0;
       padding: 10px;
       font-size: 1em;
     }
@@ -29,62 +29,125 @@
     button:hover {
       background-color: #0056b3;
     }
-    pre {
-      background-color: #eee;
-      padding: 10px;
-      white-space: pre-wrap;
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: #eee;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .uid {
+      font-family: monospace;
+    }
+    .remover {
+      background-color: #dc3545;
+      margin-left: 10px;
+      padding: 6px 10px;
+    }
+    .remover:hover {
+      background-color: #b02a37;
     }
   </style>
 </head>
 <body>
-  <h2>Editor de UIDs Proibidos</h2>
+  <h2>🐶 Cães Proibidos</h2>
 
   <label>Token pessoal do GitHub:</label>
-  <input type="password" id="token" placeholder="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">
+  <input type="password" id="token" placeholder="ghp_...">
 
-  <label>Lista de UIDs proibidos (uma linha por UID):</label>
-  <textarea id="uids" rows="10" placeholder="[80, 48, 185, 30, 199]&#10;[12, 34, 56, 78, 90]"></textarea>
+  <label>Novo UID (formato: 80,48,185,30,199):</label>
+  <input type="text" id="novoUid" placeholder="Ex: 12,34,56,78,90">
+  <button onclick="adicionarUid()">Adicionar UID</button>
 
-  <button onclick="guardar()">Guardar UIDs no GitHub</button>
+  <ul id="listaUids"></ul>
+
+  <button onclick="guardar()">💾 Guardar no GitHub</button>
 
   <pre id="resposta"></pre>
 
   <script>
+    let uids = [];
+
+    const repo = "GohanDev/IoTProject";
+    const path = "uids_proibidos.json";
+    const apiUrl = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+    async function carregarUids() {
+      const resposta = document.getElementById("resposta");
+      resposta.textContent = "🔄 A carregar lista...";
+
+      try {
+        const r = await fetch(apiUrl);
+        const data = await r.json();
+        const conteudo = JSON.parse(atob(data.content));
+        uids = conteudo.proibidos || [];
+        mostrarUids();
+        resposta.textContent = "✅ Lista carregada com sucesso.";
+      } catch (e) {
+        resposta.textContent = "❌ Erro ao carregar: " + e;
+      }
+    }
+
+    function mostrarUids() {
+      const ul = document.getElementById("listaUids");
+      ul.innerHTML = "";
+      uids.forEach((uid, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="uid">[${uid.join(", ")}]</span>
+                        <button class="remover" onclick="removerUid(${index})">Remover</button>`;
+        ul.appendChild(li);
+      });
+    }
+
+    function adicionarUid() {
+      const input = document.getElementById("novoUid");
+      const texto = input.value.trim();
+      if (!texto) return;
+
+      try {
+        const valores = texto.split(',').map(n => parseInt(n.trim()));
+        if (valores.length < 4 || valores.some(isNaN)) {
+          alert("Formato inválido. Usa apenas números separados por vírgulas.");
+          return;
+        }
+        uids.push(valores);
+        input.value = "";
+        mostrarUids();
+      } catch (e) {
+        alert("Erro ao adicionar UID.");
+      }
+    }
+
+    function removerUid(index) {
+      uids.splice(index, 1);
+      mostrarUids();
+    }
+
     async function guardar() {
       const token = document.getElementById("token").value.trim();
-      const uidsText = document.getElementById("uids").value.trim();
       const resposta = document.getElementById("resposta");
       resposta.textContent = "";
 
-      if (!token || !uidsText) {
-        alert("Preenche todos os campos.");
+      if (!token) {
+        alert("Insere o teu token pessoal do GitHub.");
         return;
       }
 
-      let uidList;
-      try {
-        uidList = uidsText
-          .split('\n')
-          .map(l => l.trim())
-          .filter(l => l)
-          .map(l => JSON.parse(l)); // Cada linha deve ser um array: [80, 48, 185, 30, 199]
-      } catch (e) {
-        alert("Erro ao analisar os UIDs. Verifica o formato JSON.");
-        return;
-      }
-
-      const dataJson = JSON.stringify({ proibidos: uidList }, null, 2);
-      const repo = "GohanDev/IoTProject";
-      const path = "uids_proibidos.json";
-      const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+      const dataJson = JSON.stringify({ proibidos: uids }, null, 2);
 
       try {
-        const getRes = await fetch(url, {
+        const getRes = await fetch(apiUrl, {
           headers: { Authorization: `token ${token}` }
         });
         const fileData = await getRes.json();
 
-        const updateRes = await fetch(url, {
+        const updateRes = await fetch(apiUrl, {
           method: "PUT",
           headers: {
             Authorization: `token ${token}`,
@@ -98,12 +161,13 @@
         });
 
         const resJson = await updateRes.json();
-        resposta.textContent = JSON.stringify(resJson, null, 2);
-        alert("Guardado com sucesso no GitHub!");
+        resposta.textContent = "✅ Atualizado com sucesso!";
       } catch (err) {
-        resposta.textContent = "Erro ao atualizar: " + err;
+        resposta.textContent = "❌ Erro ao guardar: " + err;
       }
     }
+
+    carregarUids(); // inicia ao abrir a página
   </script>
 </body>
 </html>
