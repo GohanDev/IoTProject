@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestor de UIDs Proibidos</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    textarea, input, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 1em;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    pre {
+      background-color: #eee;
+      padding: 10px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h2>Editor de UIDs Proibidos</h2>
+
+  <label>Token pessoal do GitHub:</label>
+  <input type="password" id="token" placeholder="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">
+
+  <label>Lista de UIDs proibidos (uma linha por UID):</label>
+  <textarea id="uids" rows="10" placeholder="[80, 48, 185, 30, 199]&#10;[12, 34, 56, 78, 90]"></textarea>
+
+  <button onclick="guardar()">Guardar UIDs no GitHub</button>
+
+  <pre id="resposta"></pre>
+
+  <script>
+    async function guardar() {
+      const token = document.getElementById("token").value.trim();
+      const uidsText = document.getElementById("uids").value.trim();
+      const resposta = document.getElementById("resposta");
+      resposta.textContent = "";
+
+      if (!token || !uidsText) {
+        alert("Preenche todos os campos.");
+        return;
+      }
+
+      let uidList;
+      try {
+        uidList = uidsText
+          .split('\n')
+          .map(l => l.trim())
+          .filter(l => l)
+          .map(l => JSON.parse(l)); // Cada linha deve ser um array: [80, 48, 185, 30, 199]
+      } catch (e) {
+        alert("Erro ao analisar os UIDs. Verifica o formato JSON.");
+        return;
+      }
+
+      const dataJson = JSON.stringify({ proibidos: uidList }, null, 2);
+      const repo = "GohanDev/IoTProject";
+      const path = "uids_proibidos.json";
+      const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+
+      try {
+        const getRes = await fetch(url, {
+          headers: { Authorization: `token ${token}` }
+        });
+        const fileData = await getRes.json();
+
+        const updateRes = await fetch(url, {
+          method: "PUT",
+          headers: {
+            Authorization: `token ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: "Atualizar lista de UIDs proibidos via editor",
+            content: btoa(unescape(encodeURIComponent(dataJson))),
+            sha: fileData.sha
+          })
+        });
+
+        const resJson = await updateRes.json();
+        resposta.textContent = JSON.stringify(resJson, null, 2);
+        alert("Guardado com sucesso no GitHub!");
+      } catch (err) {
+        resposta.textContent = "Erro ao atualizar: " + err;
+      }
+    }
+  </script>
+</body>
+</html>
