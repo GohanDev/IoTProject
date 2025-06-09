@@ -2,7 +2,7 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Gestor de Cães Proibidos</title>
+  <title>Gestor Animais Proibidos</title>
   <style>
     body {
       font-family: sans-serif;
@@ -56,7 +56,7 @@
   </style>
 </head>
 <body>
-  <h2>🐶 Cães Proibidos</h2>
+  <h2>Animais Proibidos</h2>
 
   <label>Token pessoal do GitHub:</label>
   <input type="password" id="token" placeholder="ghp_...">
@@ -67,7 +67,7 @@
 
   <ul id="listaUids"></ul>
 
-  <button onclick="guardar()">💾 Guardar no GitHub</button>
+  <button onclick="guardar()">Guardar no GitHub</button>
 
   <pre id="resposta"></pre>
 
@@ -80,7 +80,7 @@
 
     async function carregarUids() {
       const resposta = document.getElementById("resposta");
-      resposta.textContent = "🔄 A carregar lista...";
+      resposta.textContent = "A carregar lista...";
 
       try {
         const r = await fetch(apiUrl);
@@ -88,9 +88,9 @@
         const conteudo = JSON.parse(atob(data.content));
         uids = conteudo.proibidos || [];
         mostrarUids();
-        resposta.textContent = "✅ Lista carregada com sucesso.";
+        resposta.textContent = "Lista carregada com sucesso.";
       } catch (e) {
-        resposta.textContent = "❌ Erro ao carregar: " + e;
+        resposta.textContent = "Erro ao carregar: " + e;
       }
     }
 
@@ -161,9 +161,9 @@
         });
 
         const resJson = await updateRes.json();
-        resposta.textContent = "✅ Atualizado com sucesso!";
+        resposta.textContent = "Atualizado com sucesso!";
       } catch (err) {
-        resposta.textContent = "❌ Erro ao guardar: " + err;
+        resposta.textContent = "Erro ao guardar: " + err;
       }
     }
 
